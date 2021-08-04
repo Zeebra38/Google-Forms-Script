@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+    <script src="main.js"></script>
+    <style>
+        .title {
+            font-size: 18px;
+            font-family: serif;
+            font-weight: normal;
+        }
+        .sidebar-bottom
+        {
+            margin-top: 15px;
+            text-align: right;
+        }
+        .sidebar-top
+        {
+            margin-top: 15px;
+            text-align: right;
+        }
+        .sidebar
+        {
+            width: 250px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <form>
+            <div class="sidebar-top">
+                <p class="title">Email для подтверждения</p>
+                <div class="submit-emails">
+                    <ul id="email-list">
+                        <li><input type="email" placeholder="example@mail.ru" style="margin-top: 10px;"class="email-field"></li>
+                    </ul>
+                </div>
+            <button type="button" id="append">Добавить</button>
+            <button type="button" id="delete">Удалить</button>
+            <button class="action" id="save-settings">Save</button>
+            </div>
+            <div class="sidebar-bottom">
+            </div>
+        </form>
+    </div>
+    <script>
+        $(function()
+        {
+            $('#append').click(addEmailField);
+            $('#delete').click(deleteEmailField);
+        });
+        function addEmailField()
+        {
+            var emailList = document.getElementById('email-list');
+            emailList.insertAdjacentHTML('beforeend', '<li><input type="email" placeholder="example@mail.ru" style="margin-top: 10px;"class="email-field"></li>');
+        };
+        function deleteEmailField()
+        {
+            var list = document.getElementById('email-list')
+            var listItems = list.getElementsByTagName("li");
+            var last = listItems[listItems.length - 1];
+            if (listItems.length > 0)   
+            {
+                list.removeChild(last);
+            }
+        };
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <base target="_top">
+      <meta charset="UTF-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+      <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+   </head>
+   <body>
+      <div class="header">
+         <h2>Подтверждение формы</h2>
+         <p>Добрый день. Вы получили это письмо, так как вас назначили на одобрение ответов.</p>
+         <p>К данному письму прикреплен файл в формате <b>PDF</b>, который вам нужно проверить. </p>
+         <p>После проверки одобрите или отклоните запрос нажатием кнопок ниже.</p>
+      </div>
+      <div class="buttons">
+         <a class="button approve" style="width: 200px; height: 100px; font-size: 20px;" href="https://script.google.com/macros/s/AKfycbwj1w8j6HP23rsLLwiQ8GdBVHA2I79dTSm2vKJZfTY/dev?row=<?= row ?>&column=<?= column ?>&ssID=<?= ssID ?>&handler=Approved">Подтвердить</a>
+         <a class="button approve" style="width: 200px; height: 100px; font-size: 20px;" href="https://script.google.com/macros/s/AKfycbwj1w8j6HP23rsLLwiQ8GdBVHA2I79dTSm2vKJZfTY/dev?row=<?= row ?>&column=<?= column ?>&ssID=<?= ssID ?>&handler=Rejected">Отклонить</a>
+      </div>
+      <textarea name="commentary" id="comment" cols="30" rows="10" style="height:200px; width: 420px; font-size: 16px;" placeholder="Здесь можно написать комментарий"></textarea>
+      <!-- <script defer>
+        $(function() {
+            $('.approve').click(approveHandler);
+            $('.reject').click(rejectHandler);
+            console.log("Привязано");
+        });
+        const url = 'https://script.google.com/macros/s/AKfycby2XB60OBxukOMkkx0wflWAbV9jUbAmFek9eiweKWW8qAHS9yRK4tQIgXLXO-5execOzWCi/';
+            var data = {
+                row: 5,
+                column: 5,
+                comment: $("#comment").val()
+            };
+        function rejectHandler() {
+            console.log(data);
+            data['handler'] = 'approve';
+            try {
+                const response = fetch(url, {
+                    method: 'POST', 
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const json =  response.json();
+                console.log('Успех:', JSON.stringify(json));
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        };
+
+        function approveHandler() {
+            data['handler'] = 'reject';
+            try {
+                const response =   fetch(url, {
+                    method: 'POST', 
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const json =   response.json();
+                console.log('Успех:', JSON.stringify(json));
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        };
+      </script> -->
+   </body>
+</html>
