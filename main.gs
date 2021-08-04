@@ -18,16 +18,45 @@ function setUpTrigger() {
 function onFormSubmit(e) {
   var response = e;
   console.log(response);
-  if (response.namedValues) {
-    console.log(response.namedValues);
-  }
   var namedValues = response.namedValues;
+  var adds = [];
+  var filesId = [];
+  var adds = applicationSplit(namedValues['Приложение'][0]);
+  namedValues['files Id'] = adds['filesId'];
+  namedValues['Название приложения'] = adds['names'].join(" ");
   namedValues['row'] = response['range']['rowEnd'];
   namedValues['Номер'] = namedValues['row'];
   var docID = createDoc(response.namedValues);
   var formName = FormApp.openByUrl(SpreadsheetApp.getActive().getFormUrl()).getTitle();
-  responseToRespondent(namedValues['Адрес электронной почты'][0], "Форма принята к рассмотрению", formName, DriveApp.getFileById(docID));
+  var doc = DriveApp.getFileById(docID);
+  var docs = [doc];
+  for (let addId of adds['filesId'])
+  {
+    docs.push(DriveApp.getFileById(addId));
+  }
+  console.log(namedValues);
+  responseToRespondent(namedValues['Адрес электронной почты'][0], "Форма принята к рассмотрению", formName, docs);
   sendOnApprove(SpreadsheetApp.getActive(), namedValues['row']);
+}
+
+function applicationSplit(application)
+{
+  if (application != "")
+  {
+    var adds = [];
+  var filesId = [];
+  var namedValues = {}
+  application = application.replace(",", '').split(" ");
+  for (let add of application)
+  {
+    filesId.push(add.split("id=")[1]);
+    adds.push(DriveApp.getFileById(add.split("id=")[1]).getName());
+  }
+  namedValues['filesId'] = filesId;
+  namedValues['names'] = adds;
+  return namedValues;
+  }
+  return {'filesId': [], 'names': []}
 }
 
 function onEdit(e) {
@@ -44,7 +73,21 @@ function onChange(e) {
     console.log(response.value);
 }
 
-
+function getApplication(ss, findRow)
+{
+  var sheet = ss.getActiveSheet();
+  var lastCol = ss.getLastColumn();
+  var range = sheet.getRange(1, 1, 1, lastCol);
+  var values = range.getValues();
+  for (var row in values) {
+    for (var col in values[row]) {
+      if (values[row][col] == "Приложение")
+      {
+        return sheet.getRange(findRow, parseInt(col) + 1).getValue();
+      }
+    }
+  }
+}
 function createDoc(namedValues) {
   var ss = SpreadsheetApp.getActive();
   var name = ss.getName();
@@ -82,14 +125,12 @@ function createDoc(namedValues) {
   namedValues['Месяц'] = todayData[1];
   namedValues['Год'] = todayData[2];
   var name = `${namedValues['Год']}-${new Date().getMonth() + 1}-${namedValues['День']} Записка №${namedValues['row']}.docx`;
-  console.log(name);
-  docFile = DriveApp.getFileById(template.getId()).makeCopy(name, docFolder);
+  var docFile = DriveApp.getFileById(template.getId()).makeCopy(name, docFolder);
   var doc = DocumentApp.openById(docFile.getId());
   replaceValues(doc, namedValues);
   doc.saveAndClose();
   var doc = DocumentApp.openById(docFile.getId());
   saveAsPDF(doc, docFolder);
-  Utilities.sleep(2000);
   return docFile.getId();
 }
 

@@ -19,27 +19,29 @@ function sendEmail(email, subj, message) {
   );
 }
 
-function sendEmailWithAttach(email, subj, message, file) {
+function sendEmailWithAttach(email, subj, message, files) {
   MailApp.sendEmail(
     {
       to: email,
       subject: subj,
       htmlBody: message,
-      attachments: file
+      attachments: files
     }
   );
 }
 
 
-function responseToRespondent(email, subject, formName, file, comment) {
+function responseToRespondent(email, subject, formName, files, comments="") {
   var templ;
   switch (subject)
   {
     case "Форма отклонена":
     templ = HtmlService.createTemplateFromFile('rejectedForm');
+    templ.comments = comments;
     break;
     case "Форма одобрена":
     templ = HtmlService.createTemplateFromFile('approvedForm');
+    templ.comments = comments;
     break;
     case "Форма принята к рассмотрению":
     templ = HtmlService.createTemplateFromFile('starterNotification');
@@ -47,7 +49,7 @@ function responseToRespondent(email, subject, formName, file, comment) {
   }
   templ.formName = formName;
   var message = templ.evaluate().getContent();
-  // sendEmailWithAttach(email, subject, message, [file]);
+  sendEmailWithAttach(email, subject, message, files);
 }
 
 function getListOfApprovers(ss) {
@@ -72,7 +74,7 @@ function getListOfApprovers(ss) {
 
 function sendOnApprove(ss, row) {
   // ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
-  // row = 15;
+  // row = 17;
   var sheet = ss.getActiveSheet();
   var name = ss.getName();
   var docFolderName = name.replace('(Ответы)', 'Документы');
@@ -81,6 +83,13 @@ function sendOnApprove(ss, row) {
   var dir = DriveApp.getFolderById(folderId);
   var docFolder = dir.getFoldersByName(docFolderName).next();
   var doc = docFolder.searchFiles(`title contains "Записка №${row}"`).next();
+  var docs = [doc];
+  var addStr = getApplication(ss, row);
+  var adds = applicationSplit(addStr);
+  for (let addId of adds['filesId'])
+  {
+    docs.push(DriveApp.getFileById(addId));
+  }
   getListOfApprovers(ss).forEach(function(approver) {
     sheet.getRange(row, approver.column).setValue("?");
     var templ = HtmlService.createTemplateFromFile('goToApprove');
@@ -89,7 +98,7 @@ function sendOnApprove(ss, row) {
     templ.ssID = ss.getId();
     templ.scriptURL = loadSettings().scriptURL;
     var message = templ.evaluate().getContent();
-    sendEmailWithAttach(approver.email, "Подтвердите форму", message, [doc]);
+    sendEmailWithAttach(approver.email, "Подтвердите форму", message, docs);
   });
 }
 
@@ -98,13 +107,15 @@ function readyCheck(ss, row, column)
   var sheet = ss.getActiveSheet();
   var lastCol = ss.getLastColumn();
   var approvers = getListOfApprovers(ss);
-  var responses = [];
+  var start_responses = [];
+  var notes = [];
   console.log(approvers);
   for (let approver of approvers)
   {
-    responses.push(sheet.getRange(row, approver.column).getValue());
+    start_responses.push(sheet.getRange(row, approver.column).getValue());
+    notes.push(sheet.getRange(row, approver.column).getNote());
   }
-  responses = [...new Set(responses)];
+  var responses = [...new Set(start_responses)];
   console.log(responses);
   var name = ss.getName();
   var docFolderName = name.replace('(Ответы)', 'Документы');
@@ -113,15 +124,23 @@ function readyCheck(ss, row, column)
   var dir = DriveApp.getFolderById(folderId);
   var docFolder = dir.getFoldersByName(docFolderName).next();
   var doc = docFolder.searchFiles(`title contains "Записка №${row}"`).next();
+  var docs = [doc]
+  var addStr = getApplication(ss, row);
+  var adds = applicationSplit(addStr);
+  for (let addId of adds['filesId'])
+  {
+    docs.push(DriveApp.getFileById(addId));
+  }
+  var comment = notes.join(";                 ");
   if (responses.indexOf(0) != -1)
   {
     var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
-    responseToRespondent(getRespondentEmail(ss, row), "Форма отклонена", formName, doc);
+    responseToRespondent(getRespondentEmail(ss, row), "Форма отклонена", formName, docs, comment);
   }
   else if (responses.length == 1 && responses.indexOf(1) != -1)
   {
     var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
-    responseToRespondent(getRespondentEmail(ss, row), "Форма одобрена", formName, doc);
+    responseToRespondent(getRespondentEmail(ss, row), "Форма одобрена", formName, docs, comment);
   }
 }
 
