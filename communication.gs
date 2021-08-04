@@ -7,38 +7,6 @@ class Approver
     this.column = column;
   }
 }
-function test2()
-{
-  e = {
-  namedValues: 
-   { 'Подразделение': [ 'Лаборатория 1' ],
-     'email заказчика': [ 'email заказчика' ],
-     'Дополнительные условия': [ 'Дополнительные условия' ],
-     '': [ '' ],
-     'Наименования товаров': [ 'Наименования товаров\nНаименования товаров\nНаименования товаров\nНаименования товаров\nНаименования товаров' ],
-     'Адрес электронной почты': [ 'milekag318@obxstorm.com' ],
-     'e-mail или телефон исполнителя': [ 'e-mail или телефон исполнителя' ],
-     'Исполнитель': [ 'Исполнитель' ],
-     'Приложение': [ '' ],
-     'Отметка времени': [ '03.08.2021 9:29:02' ],
-     'Организация заказчик': [ 'ООО' ] },
-  range: { columnEnd: 10, columnStart: 1, rowEnd: 25, rowStart: 25 },
-  source: {},
-  triggerUid: '1736862934028947985',
-  values: 
-   [ '03.08.2021 9:29:02',
-     'Лаборатория 1',
-     'ООО',
-     '',
-     'Дополнительные условия',
-     'e-mail или телефон исполнителя',
-     'email заказчика',
-     'Наименования товаров\nНаименования товаров\nНаименования товаров\nНаименования товаров\nНаименования товаров',
-     'Исполнитель',
-     'milekag318@obxstorm.com',
-     '' ] };
-  onFormSubmit(e);
-}
 
 function sendEmail(email, subj, message) {
   console.log(email);
@@ -62,15 +30,6 @@ function sendEmailWithAttach(email, subj, message, file) {
   );
 }
 
-function test()
-{
-  var templ = HtmlService.createTemplateFromFile('approveForm');
-  templ.row = 5;
-  templ.column = 5;
-  templ.sheetID = "1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A";
-  var message = templ.evaluate().getContent();
-  sendEmail("bars00011@gmail.com", "test", message);
-}
 
 function responseToRespondent(email, subject, formName, file, comment) {
   var templ;
@@ -124,12 +83,13 @@ function sendOnApprove(ss, row) {
   var doc = docFolder.searchFiles(`title contains "Записка №${row}"`).next();
   getListOfApprovers(ss).forEach(function(approver) {
     sheet.getRange(row, approver.column).setValue("?");
-    var templ = HtmlService.createTemplateFromFile('approveForm');
+    var templ = HtmlService.createTemplateFromFile('goToApprove');
     templ.row = row;
     templ.column = approver.column;
     templ.ssID = ss.getId();
+    templ.scriptURL = loadSettings().scriptURL;
     var message = templ.evaluate().getContent();
-    // sendEmailWithAttach(approver.email, "Подтвердите форму", message, [doc]);
+    sendEmailWithAttach(approver.email, "Подтвердите форму", message, [doc]);
   });
 }
 

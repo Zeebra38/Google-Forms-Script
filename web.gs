@@ -1,40 +1,56 @@
-class approveForm
-{
-  constructor(email, name, column)
-  {
-    this.name = name;
-    this.email = email;
-    this.column = column;
-  }
-}
-
 function doGet(e) {
   console.log(e);
   var params = e['parameter'];
   console.log(params);
+  switch (params.action) {
+    case "sendResponse":
+      return sendResponse(params);
+    case "goToResponsePage":
+      return goToResponsePage(params);
+    default:
+      return HtmlService.createHtmlOutput("Ошибка 500");
+  }
+}
+
+function doPost(e) {
+  console.log(e);
+  var params = e['parameter'];
+  console.log(params);
+  return HtmlService.createHtmlOutput("OK");
+}
+
+function sendResponse(params) {
   var ss = SpreadsheetApp.openById(params['ssID']);
   var sheet = ss.getActiveSheet();
   var row = params['row'];
   var column = params['column'];
   var cell = sheet.getRange(row, column);
-  if (params['handler'] == 'Approved')
-  {
-    cell.setValue("1");
-    readyCheck(ss, row, column);
-    return HtmlService.createHtmlOutput(`Вы подтвердили форму`);
+  if (cell.getValue() == "?") {
+    switch (params.handler) {
+      case 'Approved':
+        cell.setValue("1");
+        cell.setNote(params.comment.replaceAll("+", " "));
+        readyCheck(ss, row, column);
+        return HtmlService.createHtmlOutput(`Вы успешно подтвердили форму`);
+      case 'Rejected':
+        cell.setValue("0");
+        cell.setNote(params.comment.replaceAll("+", " "));
+        readyCheck(ss, row, column);
+        return HtmlService.createHtmlOutput(`Вы успешно отклонили форму`);
+      default:
+        return HtmlService.createHtmlOutput("Ошибка 500");
+    }
   }
-    if (params['handler'] == 'Rejected')
-  {
-    cell.setValue("0");
-    readyCheck(ss, row, column);
-    // return HtmlService.createHtmlOutput(`Вы отклонили форму`);
-    return HtmlService.createHtmlOutputFromFile(`approveForm`);
+  else {
+    return HtmlService.createHtmlOutput('Ошибка. Вы уже отправляли свой ответ.')
   }
-  return HtmlService.createHtmlOutput("Ошибка");
 }
 
-function doPost(e)
-{
-  var params = JSON.parse(e);
-  return HtmlService.createHtmlOutput(params);
+function goToResponsePage(params) {
+  var templ = HtmlService.createTemplateFromFile('approveForm');
+  templ.row = params.row;
+  templ.column = params.column;
+  templ.ssID = params.ssID;
+  templ.scriptURL = loadSettings().scriptURL;
+  return templ.evaluate();
 }
