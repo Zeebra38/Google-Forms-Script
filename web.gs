@@ -25,16 +25,16 @@ function sendResponse(params) {
   var row = params['row'];
   var column = params['column'];
   var cell = sheet.getRange(row, column);
-  if (cell.getValue() == "?" || cell.getValue() == "0") {
+  if (cell.getValue() == "На обработке" || cell.getValue() == "Отклонено") {
     cell.clearNote();
     switch (params.handler) {
       case 'Approved':
-        cell.setValue("1");
+        cell.setValue("Подтверждено");
         cell.setNote(params.comment.replaceAll("+", " "));
         readyCheck(ss, row, column);
         return HtmlService.createHtmlOutput(`Вы успешно подтвердили форму`);
       case 'Rejected':
-        cell.setValue("0");
+        cell.setValue("Отклонено");
         cell.setNote(params.comment.replaceAll("+", " "));
         readyCheck(ss, row, column);
         return HtmlService.createHtmlOutput(`Вы успешно отклонили форму`);

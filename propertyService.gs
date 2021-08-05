@@ -1,6 +1,6 @@
 function saveSettings() {
   var scriptProperties = PropertiesService.getScriptProperties();
-  scriptProperties.setProperty('scriptURL', 'https://script.google.com/macros/s/AKfycbwj1w8j6HP23rsLLwiQ8GdBVHA2I79dTSm2vKJZfTY/dev');
+  scriptProperties.setProperty('scriptURL', 'https://script.google.com/macros/s/AKfycbxI19xiYqrIRrvVrZhKRvUrIuBPHLWYdHx_-pSyG3gwFrd5y87k3y6xN5wYmWpo33FS/exec');
 }
 
 function loadSettings()

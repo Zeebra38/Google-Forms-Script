@@ -93,10 +93,10 @@ function sendOnApprove(ss, row, firstTime) {
   getListOfApprovers(ss).forEach(function (approver) {
     var cell = sheet.getRange(row, approver.column);
     if (firstTime) {
-      cell.setValue("?");
+      cell.setValue("На обработке");
     }
     if (!sended) {
-      if (cell.getValue() == "?" || cell.getValue() == "0") {
+      if (cell.getValue() == "На обработке" || cell.getValue() == "Отклонено") {
         var templ = HtmlService.createTemplateFromFile('goToApprove');
         templ.row = row;
         templ.column = approver.column;
@@ -138,14 +138,14 @@ function readyCheck(ss, row, column) {
   }
   var comment = notes.join(";                 ");
   var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
-  if (responses.indexOf(0) != -1) {
+  if (responses.indexOf("Отклонено") != -1) {
     responseToRespondent(getRespondentEmail(ss, row), "Форма отклонена", formName, docs, comment, appendEditorUrl(ss, row, true));
   }
-  else if (responses.length == 1 && responses.indexOf(1) != -1) {
+  else if (responses.length == 1 && responses.indexOf("Подтверждено") != -1) {
     var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
     responseToRespondent(getRespondentEmail(ss, row), "Форма одобрена", formName, docs, comment);
   }
-  else if(responses.indexOf(1) != -1)
+  else if(responses.indexOf("Подтверждено") != -1)
   {
     sendOnApprove(ss, row, false);
   }

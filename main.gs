@@ -24,7 +24,7 @@ function onFormSubmit(e) {
   var folderId = curFile.getParents().next().getId();
   var dir = DriveApp.getFolderById(folderId);
   var docFolder = dir.getFoldersByName(docFolderName).next();
-  var previousDocs = docFolder.searchFiles(`title contains "Записка №${namedValues['row']}"`);
+  var previousDocs = docFolder.searchFiles(`title contains "Записка №${response['range']['rowEnd']}"`);
   var firstTime = !previousDocs.hasNext();
   console.log(response);
   var namedValues;
@@ -32,7 +32,7 @@ function onFormSubmit(e) {
     namedValues = response.namedValues;
   }
   else {
-
+    namedValues = getResponseValues(ss, response['range']['rowEnd']);
   }
   var adds = applicationSplit(getApplication(ss, response['range']['rowEnd']));
   namedValues['files Id'] = adds['filesId'];
@@ -43,7 +43,7 @@ function onFormSubmit(e) {
   while (previousDocs.hasNext()) {
     Drive.Files.remove(previousDocs.next().getId());
   }
-  var docID = createDoc(response.namedValues);
+  var docID = createDoc(namedValues);
   var formName = FormApp.openByUrl(SpreadsheetApp.getActive().getFormUrl()).getTitle();
   var doc = DriveApp.getFileById(docID);
   var docs = [doc];
@@ -71,21 +71,6 @@ function applicationSplit(application) {
   }
   return { 'filesId': [], 'names': [] }
 }
-
-function onEdit(e) {
-  var response = e;
-  console.log(response);
-  if (response.value)
-    console.log(response.value);
-}
-
-function onChange(e) {
-  var response = e;
-  console.log(response);
-  if (response.value)
-    console.log(response.value);
-}
-
 function getApplication(ss, findRow) {
   var sheet = ss.getActiveSheet();
   var lastCol = ss.getLastColumn();
@@ -147,15 +132,14 @@ function createDoc(namedValues) {
 }
 
 function getResponseValues(ss, row) {
-  ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
-  row = 16;
+  // ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
+  // row = 16;
   var formURL = ss.getFormUrl();
   var form = FormApp.openByUrl(formURL);
   var sheet = ss.getActiveSheet();
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues();
   var columnIndex = headers[0].indexOf('Edit URL') + 1;
   var values = sheet.getRange(row, 1, 1, columnIndex - 1).getValues()[0];
-  console.log(values);
   var formSubmitted = form.getResponses(values[0])[0];
   var itemResponses = formSubmitted.getGradableItemResponses();
   var namedValues = {}
@@ -163,7 +147,7 @@ function getResponseValues(ss, row) {
     var itemResponse = itemResponses[i];
     namedValues[itemResponse.getItem().getTitle()] = itemResponse.getResponse();
   }
-  console.log(namedValues);
+  return namedValues;
 }
 function replaceValues(doc, namedValues) {
   var body = doc.getBody();
