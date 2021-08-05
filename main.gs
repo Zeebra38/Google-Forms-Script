@@ -17,46 +17,59 @@ function setUpTrigger() {
 
 function onFormSubmit(e) {
   var response = e;
+  var ss = SpreadsheetApp.getActive();
+  var name = ss.getName();
+  var docFolderName = name.replace('(Ответы)', 'Документы');
+  var curFile = DriveApp.getFileById(ss.getId());
+  var folderId = curFile.getParents().next().getId();
+  var dir = DriveApp.getFolderById(folderId);
+  var docFolder = dir.getFoldersByName(docFolderName).next();
+  var previousDocs = docFolder.searchFiles(`title contains "Записка №${namedValues['row']}"`);
+  var firstTime = !previousDocs.hasNext();
   console.log(response);
-  var namedValues = response.namedValues;
-  var adds = [];
-  var filesId = [];
-  var adds = applicationSplit(namedValues['Приложение'][0]);
+  var namedValues;
+  if (firstTime) {
+    namedValues = response.namedValues;
+  }
+  else {
+
+  }
+  var adds = applicationSplit(getApplication(ss, response['range']['rowEnd']));
   namedValues['files Id'] = adds['filesId'];
   namedValues['Название приложения'] = adds['names'].join(" ");
   namedValues['row'] = response['range']['rowEnd'];
   namedValues['Номер'] = namedValues['row'];
+  appendEditorUrl(ss, namedValues['row']);
+  while (previousDocs.hasNext()) {
+    Drive.Files.remove(previousDocs.next().getId());
+  }
   var docID = createDoc(response.namedValues);
   var formName = FormApp.openByUrl(SpreadsheetApp.getActive().getFormUrl()).getTitle();
   var doc = DriveApp.getFileById(docID);
   var docs = [doc];
-  for (let addId of adds['filesId'])
-  {
+  for (let addId of adds['filesId']) {
     docs.push(DriveApp.getFileById(addId));
   }
   console.log(namedValues);
-  responseToRespondent(namedValues['Адрес электронной почты'][0], "Форма принята к рассмотрению", formName, docs);
-  sendOnApprove(SpreadsheetApp.getActive(), namedValues['row']);
+  responseToRespondent(getRespondentEmail(ss, namedValues['row']), "Форма принята к рассмотрению", formName, docs);
+  sendOnApprove(SpreadsheetApp.getActive(), namedValues['row'], firstTime);
 }
 
-function applicationSplit(application)
-{
-  if (application != "")
-  {
+function applicationSplit(application) {
+  if (application != "") {
     var adds = [];
-  var filesId = [];
-  var namedValues = {}
-  application = application.replace(",", '').split(" ");
-  for (let add of application)
-  {
-    filesId.push(add.split("id=")[1]);
-    adds.push(DriveApp.getFileById(add.split("id=")[1]).getName());
+    var filesId = [];
+    var namedValues = {}
+    application = application.replace(",", '').split(" ");
+    for (let add of application) {
+      filesId.push(add.split("id=")[1]);
+      adds.push(DriveApp.getFileById(add.split("id=")[1]).getName());
+    }
+    namedValues['filesId'] = filesId;
+    namedValues['names'] = adds;
+    return namedValues;
   }
-  namedValues['filesId'] = filesId;
-  namedValues['names'] = adds;
-  return namedValues;
-  }
-  return {'filesId': [], 'names': []}
+  return { 'filesId': [], 'names': [] }
 }
 
 function onEdit(e) {
@@ -73,16 +86,14 @@ function onChange(e) {
     console.log(response.value);
 }
 
-function getApplication(ss, findRow)
-{
+function getApplication(ss, findRow) {
   var sheet = ss.getActiveSheet();
   var lastCol = ss.getLastColumn();
   var range = sheet.getRange(1, 1, 1, lastCol);
   var values = range.getValues();
   for (var row in values) {
     for (var col in values[row]) {
-      if (values[row][col] == "Приложение")
-      {
+      if (values[row][col] == "Приложение") {
         return sheet.getRange(findRow, parseInt(col) + 1).getValue();
       }
     }
@@ -129,11 +140,31 @@ function createDoc(namedValues) {
   var doc = DocumentApp.openById(docFile.getId());
   replaceValues(doc, namedValues);
   doc.saveAndClose();
-  var doc = DocumentApp.openById(docFile.getId());
+  Utilities.sleep(500);
+  doc = DocumentApp.openById(docFile.getId());
   saveAsPDF(doc, docFolder);
   return docFile.getId();
 }
 
+function getResponseValues(ss, row) {
+  ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
+  row = 16;
+  var formURL = ss.getFormUrl();
+  var form = FormApp.openByUrl(formURL);
+  var sheet = ss.getActiveSheet();
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues();
+  var columnIndex = headers[0].indexOf('Edit URL') + 1;
+  var values = sheet.getRange(row, 1, 1, columnIndex - 1).getValues()[0];
+  console.log(values);
+  var formSubmitted = form.getResponses(values[0])[0];
+  var itemResponses = formSubmitted.getGradableItemResponses();
+  var namedValues = {}
+  for (var i = 0; i < itemResponses.length; i++) {
+    var itemResponse = itemResponses[i];
+    namedValues[itemResponse.getItem().getTitle()] = itemResponse.getResponse();
+  }
+  console.log(namedValues);
+}
 function replaceValues(doc, namedValues) {
   var body = doc.getBody();
   Object.entries(namedValues).forEach(function ([key, value]) {

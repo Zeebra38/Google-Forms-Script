@@ -1,7 +1,5 @@
-class Approver
-{
-  constructor(email, name, column)
-  {
+class Approver {
+  constructor(email, name, column) {
     this.name = name;
     this.email = email;
     this.column = column;
@@ -31,21 +29,21 @@ function sendEmailWithAttach(email, subj, message, files) {
 }
 
 
-function responseToRespondent(email, subject, formName, files, comments="") {
+function responseToRespondent(email, subject, formName, files, comments = "", editUrl = "") {
   var templ;
-  switch (subject)
-  {
+  switch (subject) {
     case "Форма отклонена":
-    templ = HtmlService.createTemplateFromFile('rejectedForm');
-    templ.comments = comments;
-    break;
+      templ = HtmlService.createTemplateFromFile('rejectedForm');
+      templ.comments = comments;
+      templ.editUrl = editUrl;
+      break;
     case "Форма одобрена":
-    templ = HtmlService.createTemplateFromFile('approvedForm');
-    templ.comments = comments;
-    break;
+      templ = HtmlService.createTemplateFromFile('approvedForm');
+      templ.comments = comments;
+      break;
     case "Форма принята к рассмотрению":
-    templ = HtmlService.createTemplateFromFile('starterNotification');
-    break;
+      templ = HtmlService.createTemplateFromFile('starterNotification');
+      break;
   }
   templ.formName = formName;
   var message = templ.evaluate().getContent();
@@ -62,8 +60,7 @@ function getListOfApprovers(ss) {
   var approvers = [];
   for (var row in values) {
     for (var col in values[row]) {
-      if (values[row][col].match(pattern))
-      {
+      if (values[row][col].match(pattern)) {
         var splitList = values[row][col].split("/");
         approvers.push(new Approver(splitList[0], splitList[1], parseInt(col) + 1));
       }
@@ -71,12 +68,15 @@ function getListOfApprovers(ss) {
   }
   return approvers;
 }
-
-function sendOnApprove(ss, row) {
+/**
+ * @param {Boolean} firstTime
+ */
+function sendOnApprove(ss, row, firstTime) {
   // ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
   // row = 17;
   var sheet = ss.getActiveSheet();
   var name = ss.getName();
+  console.log(firstTime);
   var docFolderName = name.replace('(Ответы)', 'Документы');
   var curFile = DriveApp.getFileById(ss.getId());
   var folderId = curFile.getParents().next().getId();
@@ -86,32 +86,38 @@ function sendOnApprove(ss, row) {
   var docs = [doc];
   var addStr = getApplication(ss, row);
   var adds = applicationSplit(addStr);
-  for (let addId of adds['filesId'])
-  {
+  for (let addId of adds['filesId']) {
     docs.push(DriveApp.getFileById(addId));
   }
-  getListOfApprovers(ss).forEach(function(approver) {
-    sheet.getRange(row, approver.column).setValue("?");
-    var templ = HtmlService.createTemplateFromFile('goToApprove');
-    templ.row = row;
-    templ.column = approver.column;
-    templ.ssID = ss.getId();
-    templ.scriptURL = loadSettings().scriptURL;
-    var message = templ.evaluate().getContent();
-    sendEmailWithAttach(approver.email, "Подтвердите форму", message, docs);
+  var sended = false;
+  getListOfApprovers(ss).forEach(function (approver) {
+    var cell = sheet.getRange(row, approver.column);
+    if (firstTime) {
+      cell.setValue("?");
+    }
+    if (!sended) {
+      if (cell.getValue() == "?" || cell.getValue() == "0") {
+        var templ = HtmlService.createTemplateFromFile('goToApprove');
+        templ.row = row;
+        templ.column = approver.column;
+        templ.ssID = ss.getId();
+        templ.scriptURL = loadSettings().scriptURL;
+        var message = templ.evaluate().getContent();
+        sendEmailWithAttach(approver.email, "Подтвердите форму", message, docs);
+        sended = true;
+      }
+    }
   });
 }
 
-function readyCheck(ss, row, column)
-{
+function readyCheck(ss, row, column) {
   var sheet = ss.getActiveSheet();
   var lastCol = ss.getLastColumn();
   var approvers = getListOfApprovers(ss);
   var start_responses = [];
   var notes = [];
   console.log(approvers);
-  for (let approver of approvers)
-  {
+  for (let approver of approvers) {
     start_responses.push(sheet.getRange(row, approver.column).getValue());
     notes.push(sheet.getRange(row, approver.column).getNote());
   }
@@ -127,36 +133,58 @@ function readyCheck(ss, row, column)
   var docs = [doc]
   var addStr = getApplication(ss, row);
   var adds = applicationSplit(addStr);
-  for (let addId of adds['filesId'])
-  {
+  for (let addId of adds['filesId']) {
     docs.push(DriveApp.getFileById(addId));
   }
   var comment = notes.join(";                 ");
-  if (responses.indexOf(0) != -1)
-  {
-    var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
-    responseToRespondent(getRespondentEmail(ss, row), "Форма отклонена", formName, docs, comment);
+  var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
+  if (responses.indexOf(0) != -1) {
+    responseToRespondent(getRespondentEmail(ss, row), "Форма отклонена", formName, docs, comment, appendEditorUrl(ss, row, true));
   }
-  else if (responses.length == 1 && responses.indexOf(1) != -1)
-  {
+  else if (responses.length == 1 && responses.indexOf(1) != -1) {
     var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
     responseToRespondent(getRespondentEmail(ss, row), "Форма одобрена", formName, docs, comment);
   }
+  else if(responses.indexOf(1) != -1)
+  {
+    sendOnApprove(ss, row, false);
+  }
 }
 
-function getRespondentEmail(ss, number)
-{
+function getRespondentEmail(ss, number) {
   var sheet = ss.getActiveSheet();
   var lastCol = ss.getLastColumn();
   var range = sheet.getRange(1, 1, 1, lastCol);
   var values = range.getValues();
-  for (var row in values) {
-    for (var col in values[row]) {
-      if (values[row][col] == "Адрес электронной почты")
-      {
-        return sheet.getRange(number, parseInt(col) + 1).getValue();
-      }
-    }
+  var column = values[0].indexOf('Адрес электронной почты');
+  return sheet.getRange(number, parseInt(column) + 1).getValue();
+}
+
+function appendEditorUrl(ss, row, justReturn = false) {
+  // ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
+  // row = 16;
+  if (!justReturn) {
+    var formURL = ss.getFormUrl();
+    var form = FormApp.openByUrl(formURL);
+    var sheet = ss.getActiveSheet();
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues();
+    var columnIndex = headers[0].indexOf('Edit URL') + 1;
+    var values = sheet.getRange(row, 1, 1, columnIndex - 1).getValues()[0];
+    var formSubmitted = form.getResponses(values[0]);
+    var editResponseUrl = formSubmitted[0].getEditResponseUrl();
+    sheet.getRange(row, columnIndex).setValue(editResponseUrl);
+    return editResponseUrl;
   }
-  return "error";
+  else {
+    var sheet = ss.getActiveSheet();
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues();
+    var columnIndex = headers[0].indexOf('Edit URL') + 1;
+    return sheet.getRange(row, columnIndex).getValue();
+  }
+}
+
+function test() {
+  var ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
+  var sheet = ss.getActiveSheet();
+  console.log(sheet.getLastRow());
 }

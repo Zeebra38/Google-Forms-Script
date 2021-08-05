@@ -25,7 +25,8 @@ function sendResponse(params) {
   var row = params['row'];
   var column = params['column'];
   var cell = sheet.getRange(row, column);
-  if (cell.getValue() == "?") {
+  if (cell.getValue() == "?" || cell.getValue() == "0") {
+    cell.clearNote();
     switch (params.handler) {
       case 'Approved':
         cell.setValue("1");
@@ -42,7 +43,7 @@ function sendResponse(params) {
     }
   }
   else {
-    return HtmlService.createHtmlOutput('Ошибка. Вы уже отправляли свой ответ.')
+    return HtmlService.createHtmlOutput('Ошибка. Вы уже одобрили форму.')
   }
 }
 
