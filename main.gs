@@ -56,11 +56,12 @@ function onFormSubmit(e) {
 }
 
 function applicationSplit(application) {
+  console.log(application);
   if (application != "") {
     var adds = [];
     var filesId = [];
     var namedValues = {}
-    application = application.replace(",", '').split(" ");
+    application = application.replaceAll(",", '').split(" ");
     for (let add of application) {
       filesId.push(add.split("id=")[1]);
       adds.push(DriveApp.getFileById(add.split("id=")[1]).getName());
