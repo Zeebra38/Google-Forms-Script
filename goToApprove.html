@@ -5,8 +5,8 @@
       <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
   </head>
   <body>
-    <p>Добрый день. Вам необходимо рассмотреть служебную записку, сформированную по форме</p>
-    <p>Рассмотрите прикрепленные материалы и нажмите на кнопку</p>
-    <a class="button" style="width: 200px; height: 100px; font-size: 20px;" href="<?= scriptURL ?>?action=goToResponsePage&row=<?= row ?>&column=<?= column ?>&ssID=<?= ssID ?>">Перейти к рассмотрению</a>
+    <p>Добрый день. Вам необходимо рассмотреть служебную записку, сформированную по форме <b><?= formName ?></b>.</p>
+    <p>Рассмотрите прикрепленные материалы и нажмите на ссылку</p>
+    <a class="button" style="width: 200px; height: 100px; font-size: 20px;" href="<?= scriptURL ?>?action=goToResponsePage&row=<?= row ?>&column=<?= column ?>&ssID=<?= ssID ?>">Подтвердить/Отклонить</a>
   </body>
 </html>

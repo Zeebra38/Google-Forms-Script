@@ -1,26 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
-   <head>
-      <base target="_top">
-      <meta charset="UTF-8">
-      <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-      <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
-   </head>
-   <body>
-      <div class="header">
-         <h1>Подтверждение формы</h1>
-      </div>
-      <div class="buttons">
-         <a class="button post-btn approve-btn" id="approve" style="width: 200px; height: 100px; font-size: 20px;"
-            href="<?= scriptURL ?>?action=sendResponse&row=<?= row ?>&column=<?= column ?>&ssID=<?= ssID ?>&handler=Approved&comment=">Подтвердить</a>
-         <a class="button post-btn reject-btn" id = "rejected" style="width: 200px; height: 100px; font-size: 20px;"
-            href="<?= scriptURL ?>?action=sendResponse&row=<?= row ?>&column=<?= column ?>&ssID=<?= ssID ?>&handler=Rejected&comment=">Отклонить</a>
-      </div>
-      <textarea name="commentary" id="comment" oninput="changeLink()" oncols="30" rows="10" style="height:200px; width: 420px; font-size: 16px; margin-top: 10px;" placeholder="Здесь можно написать комментарий"></textarea>
-      <script defer>
-        const btnA = document.getElementById("approve");
+
+<head>
+	<base target="_top">
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+	<link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+</head>
+
+<body>
+  <div class="main" style="margin-left: 30px;">
+    <div class="header">
+		<h1 style="font-size: 20px;">Подтверждение формы</h1>
+	</div>
+	<textarea name="commentary" id="comment" oninput="changeLink()" oncols="30" rows="10" style="height:200px; width: 420px; font-size: 16px; margin-top: 10px;" placeholder="Здесь можно написать комментарий"></textarea>
+	<div class="buttons">
+		<a class="button post-btn approve-btn" id="approve" style="width: 200px; height: 100px; font-size: 20px;"
+			href="<?= scriptURL ?>?action=sendResponse&row=<?= row ?>&column=<?= column ?>&ssID=<?= ssID ?>&handler=Approved&comment=">Подтвердить</a>
+		<a class="button post-btn reject-btn" id="rejected" style="width: 200px; height: 100px; font-size: 20px;"
+			href="<?= scriptURL ?>?action=sendResponse&row=<?= row ?>&column=<?= column ?>&ssID=<?= ssID ?>&handler=Rejected&comment=">Отклонить</a>
+	</div>
+  </div>
+	<script defer>
+		const btnA = document.getElementById("approve");
         const btnR = document.getElementById("rejected");
         const originA = btnA.href;
         const originR = btnR.href;
@@ -32,6 +36,7 @@
           btnA.href = originA + textarea.value.replaceAll(" ", "+");
           btnR.href = originR + textarea.value.replaceAll(" ", "+");
          }
-      </script>
-   </body>
+	</script>
+</body>
+
 </html>

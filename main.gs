@@ -7,9 +7,7 @@ function setUpTrigger() {
         ScriptApp.deleteTrigger(triggers[i]);
       }
     }
-    // ScriptApp.newTrigger('onEdit').forSpreadsheet(element).onEdit().create();
     ScriptApp.newTrigger('onFormSubmit').forSpreadsheet(element).onFormSubmit().create();
-    // ScriptApp.newTrigger('onChange').forSpreadsheet(element).onChange().create();
   })
 
 }
@@ -36,28 +34,39 @@ function onFormSubmit(e) {
   }
   var adds = applicationSplit(getApplication(ss, response['range']['rowEnd']));
   namedValues['files Id'] = adds['filesId'];
-  namedValues['Название приложения'] = adds['names'].join(" ");
+  namedValues['Название приложения'] = adds['names'].join(", ");
   namedValues['row'] = response['range']['rowEnd'];
   namedValues['Номер'] = namedValues['row'];
+  var row = namedValues['row'];
   appendEditorUrl(ss, namedValues['row']);
   while (previousDocs.hasNext()) {
     Drive.Files.remove(previousDocs.next().getId());
   }
   var docID = createDoc(namedValues);
-  var formName = FormApp.openByUrl(SpreadsheetApp.getActive().getFormUrl()).getTitle();
+  var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
   var doc = DriveApp.getFileById(docID);
   var docs = [doc];
   for (let addId of adds['filesId']) {
     docs.push(DriveApp.getFileById(addId));
   }
   console.log(namedValues);
-  responseToRespondent(getRespondentEmail(ss, namedValues['row']), "Форма принята к рассмотрению", formName, docs);
-  sendOnApprove(SpreadsheetApp.getActive(), namedValues['row'], firstTime);
+  if (firstTime)
+  {
+    responseToRespondent(getRespondentEmail(ss, namedValues['row']), "направлена на согласование", formName, docs, "", "", ss, namedValues['row']);
+  }
+  if (checkFinalStage(ss,row))
+  {
+    sendToDestination(ss, row);
+  }
+  else
+  {
+    sendOnApprove(ss, namedValues['row'], firstTime);
+  }
 }
 
 function applicationSplit(application) {
-  console.log(application);
-  if (application != "") {
+  console.log("application = ", application);
+  if (application != undefined) {
     var adds = [];
     var filesId = [];
     var namedValues = {}
@@ -79,7 +88,7 @@ function getApplication(ss, findRow) {
   var values = range.getValues();
   for (var row in values) {
     for (var col in values[row]) {
-      if (values[row][col] == "Приложение") {
+      if (values[row][col].toLowerCase().indexOf("приложение") != -1) {
         return sheet.getRange(findRow, parseInt(col) + 1).getValue();
       }
     }
@@ -124,7 +133,9 @@ function createDoc(namedValues) {
   var name = `${namedValues['Год']}-${new Date().getMonth() + 1}-${namedValues['День']} Записка №${namedValues['row']}.docx`;
   var docFile = DriveApp.getFileById(template.getId()).makeCopy(name, docFolder);
   var doc = DocumentApp.openById(docFile.getId());
+  console.log(namedValues);
   replaceValues(doc, namedValues);
+  Utilities.sleep(500);
   doc.saveAndClose();
   Utilities.sleep(500);
   doc = DocumentApp.openById(docFile.getId());
@@ -142,7 +153,7 @@ function getResponseValues(ss, row) {
   var columnIndex = headers[0].indexOf('Edit URL') + 1;
   var values = sheet.getRange(row, 1, 1, columnIndex - 1).getValues()[0];
   var formSubmitted = form.getResponses(values[0])[0];
-  var itemResponses = formSubmitted.getGradableItemResponses();
+  var itemResponses = formSubmitted.getItemResponses();
   var namedValues = {}
   for (var i = 0; i < itemResponses.length; i++) {
     var itemResponse = itemResponses[i];
@@ -151,8 +162,30 @@ function getResponseValues(ss, row) {
   return namedValues;
 }
 function replaceValues(doc, namedValues) {
+  // namedValues = { 'Подразделение': 'Лаборатория 1',
+  // 'Краткое наименование организации заказчика': 'ООО',
+  // 'e-mail заказчика для отправки копии счета': 'e-mail заказчика для отправки копии счета',
+  // 'Наименования товаров, количество товаров, сумма': 'Наименования товаров, количество товаров, сумма\nНаименования товаров, количество товаров, сумма',
+  // 'Основание (исходящее письмо №, дата)': 'Основание (исходящее письмо №, дата)',
+  // 'Приложение (копия заявки, карточка предприятия)': 
+  //  [ '17Y-88rODoUIc384RC5UsAO_3O4bQ_50B',
+  //    '1YKCc78wDzfu0jRIpKt93m1wrWGfVZY9X' ],
+  // 'Дополнительные условия (договор)': 'Дополнительные условия (договор)\nДополнительные условия (договор)',
+  // 'Ф.И.О. исполнителя': 'Иванов',
+  // 'e-mail исполнителя': 'bars00011@gmail.com',
+  // 'files Id': 
+  //  [ '17Y-88rODoUIc384RC5UsAO_3O4bQ_50B',
+  //    '1YKCc78wDzfu0jRIpKt93m1wrWGfVZY9X' ],
+  // 'Название приложения': 'requirements - Евдоким Виноградов.txt, 2021-8-3 Записка №2 - Евдоким Виноградов.pdf',
+  // row: 10,
+  // 'Номер': 10,
+  // 'День': '9',
+  // 'Месяц': 'августа',
+  // 'Год': '2021' };
+  // doc = DocumentApp.openById("1reeTpE8IzaiPpfxNCDpZBDtEq4N-a7UKkHn1D6FrW8M");
   var body = doc.getBody();
   Object.entries(namedValues).forEach(function ([key, value]) {
+    // var pattern = addslashes("<<" + key + ">>");
     var pattern = "<<" + key + ">>";
     body.replaceText(pattern, value);
   });

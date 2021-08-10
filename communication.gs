@@ -7,7 +7,6 @@ class Approver {
 }
 
 function sendEmail(email, subj, message) {
-  console.log(email);
   MailApp.sendEmail(
     {
       to: email,
@@ -29,25 +28,28 @@ function sendEmailWithAttach(email, subj, message, files) {
 }
 
 
-function responseToRespondent(email, subject, formName, files, comments = "", editUrl = "") {
+function responseToRespondent(email, subject, formName, files, comments = "", editUrl = "", ss, row, col="") {
   var templ;
   switch (subject) {
-    case "Форма отклонена":
+    case "отклонена":
       templ = HtmlService.createTemplateFromFile('rejectedForm');
+      templ.whoRejected = ss.getActiveSheet().getRange(1, col).getValue().split('/')[0];
       templ.comments = comments;
       templ.editUrl = editUrl;
       break;
-    case "Форма одобрена":
+    case "одобрена":
       templ = HtmlService.createTemplateFromFile('approvedForm');
+      templ.approvers = getApproversToEmail(ss);
       templ.comments = comments;
       break;
-    case "Форма принята к рассмотрению":
+    case "направлена на согласование":
       templ = HtmlService.createTemplateFromFile('starterNotification');
+      templ.approvers = getApproversToEmail(ss);
       break;
   }
   templ.formName = formName;
   var message = templ.evaluate().getContent();
-  sendEmailWithAttach(email, subject, message, files);
+  sendEmailWithAttach(email, getSubject(ss ,row) + subject, message, files);
 }
 
 function getListOfApprovers(ss) {
@@ -56,7 +58,7 @@ function getListOfApprovers(ss) {
   var lastCol = ss.getLastColumn();
   var range = sheet.getRange(1, 1, 1, lastCol);
   var values = range.getValues();
-  var pattern = /\S+@\S+\/.*/;
+  var pattern = /\S+@\S+\/\S.*/;
   var approvers = [];
   for (var row in values) {
     for (var col in values[row]) {
@@ -76,7 +78,6 @@ function sendOnApprove(ss, row, firstTime) {
   // row = 17;
   var sheet = ss.getActiveSheet();
   var name = ss.getName();
-  console.log(firstTime);
   var docFolderName = name.replace('(Ответы)', 'Документы');
   var curFile = DriveApp.getFileById(ss.getId());
   var folderId = curFile.getParents().next().getId();
@@ -90,7 +91,10 @@ function sendOnApprove(ss, row, firstTime) {
     docs.push(DriveApp.getFileById(addId));
   }
   var sended = false;
-  getListOfApprovers(ss).forEach(function (approver) {
+  var approvers = getListOfApprovers(ss);
+  for(var i = 0; i < approvers.length - 1; i++)
+  {
+    var approver = approvers[i];
     var cell = sheet.getRange(row, approver.column);
     if (firstTime) {
       cell.setValue("На обработке");
@@ -99,30 +103,22 @@ function sendOnApprove(ss, row, firstTime) {
       if (cell.getValue() == "На обработке" || cell.getValue() == "Отклонено") {
         var templ = HtmlService.createTemplateFromFile('goToApprove');
         templ.row = row;
+        templ.formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
         templ.column = approver.column;
         templ.ssID = ss.getId();
         templ.scriptURL = loadSettings().scriptURL;
         var message = templ.evaluate().getContent();
-        sendEmailWithAttach(approver.email, "Подтвердите форму", message, docs);
+        sendEmailWithAttach(approver.email, getSubject(ss, row) +  "необходимо рассмотреть", message, docs);
         sended = true;
       }
     }
-  });
+  }
 }
 
-function readyCheck(ss, row, column) {
-  var sheet = ss.getActiveSheet();
-  var lastCol = ss.getLastColumn();
-  var approvers = getListOfApprovers(ss);
-  var start_responses = [];
-  var notes = [];
-  console.log(approvers);
-  for (let approver of approvers) {
-    start_responses.push(sheet.getRange(row, approver.column).getValue());
-    notes.push(sheet.getRange(row, approver.column).getNote());
-  }
-  var responses = [...new Set(start_responses)];
-  console.log(responses);
+function sendToDestination(ss, row)
+{
+  var destinationApprover = getListOfApprovers(ss).pop();
+  ss.getActiveSheet().getRange(row, destinationApprover.column).setValue("Отправлено");
   var name = ss.getName();
   var docFolderName = name.replace('(Ответы)', 'Документы');
   var curFile = DriveApp.getFileById(ss.getId());
@@ -130,20 +126,53 @@ function readyCheck(ss, row, column) {
   var dir = DriveApp.getFolderById(folderId);
   var docFolder = dir.getFoldersByName(docFolderName).next();
   var doc = docFolder.searchFiles(`title contains "Записка №${row}"`).next();
-  var docs = [doc]
+  var docs = [doc];
   var addStr = getApplication(ss, row);
   var adds = applicationSplit(addStr);
   for (let addId of adds['filesId']) {
     docs.push(DriveApp.getFileById(addId));
   }
-  var comment = notes.join(";                 ");
+  var templ = HtmlService.createTemplateFromFile("Result");
+  var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
+  templ.formName = formName;
+  templ.comments = createComment(ss, row);
+  templ.editUrl = appendEditorUrl(ss, row, true);
+  var message = templ.evaluate().getContent();
+  sendEmailWithAttach(destinationApprover.email, getSubject(ss, row) + `по форме "${formName}"`,  message, docs);
+}
+
+function readyCheck(ss, row, column) {
+  var sheet = ss.getActiveSheet();
+  var lastCol = ss.getLastColumn();
+  var approvers = getListOfApprovers(ss);
+  var start_responses = [];
+  for(var i = 0; i < approvers.length - 1; i ++)
+  {
+    start_responses.push(sheet.getRange(row, approvers[i].column).getValue()); 
+  }
+  var responses = [...new Set(start_responses)];
+  console.log("responses = ",responses);
+  var name = ss.getName();
+  var docFolderName = name.replace('(Ответы)', 'Документы');
+  var curFile = DriveApp.getFileById(ss.getId());
+  var folderId = curFile.getParents().next().getId();
+  var dir = DriveApp.getFolderById(folderId);
+  var docFolder = dir.getFoldersByName(docFolderName).next();
+  var doc = docFolder.searchFiles(`title contains "Записка №${row}"`).next();
+  var docs = [doc];
+  var addStr = getApplication(ss, row);
+  var adds = applicationSplit(addStr);
+  for (let addId of adds['filesId']) {
+    docs.push(DriveApp.getFileById(addId));
+  }
   var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
   if (responses.indexOf("Отклонено") != -1) {
-    responseToRespondent(getRespondentEmail(ss, row), "Форма отклонена", formName, docs, comment, appendEditorUrl(ss, row, true));
+    responseToRespondent(getRespondentEmail(ss, row), "отклонена", formName, docs, createComment(ss, row), appendEditorUrl(ss, row, true), ss, row, column);
   }
   else if (responses.length == 1 && responses.indexOf("Подтверждено") != -1) {
     var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
-    responseToRespondent(getRespondentEmail(ss, row), "Форма одобрена", formName, docs, comment);
+    sendToDestination(ss, row);
+    responseToRespondent(getRespondentEmail(ss, row), "одобрена", formName, docs, createComment(ss, row), "", ss, row);
   }
   else if(responses.indexOf("Подтверждено") != -1)
   {
@@ -156,7 +185,7 @@ function getRespondentEmail(ss, number) {
   var lastCol = ss.getLastColumn();
   var range = sheet.getRange(1, 1, 1, lastCol);
   var values = range.getValues();
-  var column = values[0].indexOf('Адрес электронной почты');
+  var column = values[0].indexOf('e-mail исполнителя');
   return sheet.getRange(number, parseInt(column) + 1).getValue();
 }
 
