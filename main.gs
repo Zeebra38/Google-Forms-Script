@@ -66,7 +66,7 @@ function onFormSubmit(e) {
 
 function applicationSplit(application) {
   console.log("application = ", application);
-  if (application != undefined) {
+  if (application != undefined && application.trim() != "") {
     var adds = [];
     var filesId = [];
     var namedValues = {}
@@ -162,27 +162,6 @@ function getResponseValues(ss, row) {
   return namedValues;
 }
 function replaceValues(doc, namedValues) {
-  // namedValues = { 'Подразделение': 'Лаборатория 1',
-  // 'Краткое наименование организации заказчика': 'ООО',
-  // 'e-mail заказчика для отправки копии счета': 'e-mail заказчика для отправки копии счета',
-  // 'Наименования товаров, количество товаров, сумма': 'Наименования товаров, количество товаров, сумма\nНаименования товаров, количество товаров, сумма',
-  // 'Основание (исходящее письмо №, дата)': 'Основание (исходящее письмо №, дата)',
-  // 'Приложение (копия заявки, карточка предприятия)': 
-  //  [ '17Y-88rODoUIc384RC5UsAO_3O4bQ_50B',
-  //    '1YKCc78wDzfu0jRIpKt93m1wrWGfVZY9X' ],
-  // 'Дополнительные условия (договор)': 'Дополнительные условия (договор)\nДополнительные условия (договор)',
-  // 'Ф.И.О. исполнителя': 'Иванов',
-  // 'e-mail исполнителя': 'bars00011@gmail.com',
-  // 'files Id': 
-  //  [ '17Y-88rODoUIc384RC5UsAO_3O4bQ_50B',
-  //    '1YKCc78wDzfu0jRIpKt93m1wrWGfVZY9X' ],
-  // 'Название приложения': 'requirements - Евдоким Виноградов.txt, 2021-8-3 Записка №2 - Евдоким Виноградов.pdf',
-  // row: 10,
-  // 'Номер': 10,
-  // 'День': '9',
-  // 'Месяц': 'августа',
-  // 'Год': '2021' };
-  // doc = DocumentApp.openById("1reeTpE8IzaiPpfxNCDpZBDtEq4N-a7UKkHn1D6FrW8M");
   var body = doc.getBody();
   Object.entries(namedValues).forEach(function ([key, value]) {
     // var pattern = addslashes("<<" + key + ">>");
