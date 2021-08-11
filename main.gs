@@ -1,5 +1,5 @@
-function setUpTrigger() {
-  var spreadsheetsId = '1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A'.split(" ");
+function setUpTrigger(spreadsheetsId) {
+  spreadsheetsId = spreadsheetsId.split("\n");
   spreadsheetsId.forEach(function (element) {
     if (ScriptApp.getUserTriggers(SpreadsheetApp.openById(element))) {
       var triggers = ScriptApp.getProjectTriggers();
@@ -12,6 +12,10 @@ function setUpTrigger() {
 
 }
 
+function mainSetup(ssId= "1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A")
+{
+  setUpTrigger(ssId)
+}
 
 function onFormSubmit(e) {
   var response = e;
@@ -37,11 +41,35 @@ function onFormSubmit(e) {
   namedValues['Название приложения'] = adds['names'].join(", ");
   namedValues['row'] = response['range']['rowEnd'];
   namedValues['Номер'] = namedValues['row'];
-  var row = namedValues['row'];
   appendEditorUrl(ss, namedValues['row']);
   while (previousDocs.hasNext()) {
     Drive.Files.remove(previousDocs.next().getId());
   }
+  var namedValuesMap = new Map(Object.entries(namedValues));
+  for (let key of namedValuesMap.keys())
+  {
+    if (key.indexOf("вложение при необходимости") != -1)
+    {
+      if (namedValuesMap.get(key.split(" ").slice(0, -3).join(" ").trim()) == "" && namedValuesMap.get(key) != "")
+      {
+        var bufArray = [];
+        var curArray = namedValuesMap.get(key);
+        for (var i = 0; i < curArray.length; i ++)
+        {
+          if (!firstTime)
+          {
+            bufArray.push(`https://drive.google.com/open?id=${curArray[i]}`);
+          }
+          else
+          {
+            bufArray.push(curArray[i]);
+          }
+        }
+        namedValuesMap.set(key.split(" ").slice(0, -3).join(" ").trim(), bufArray.join(", ")); 
+      }
+    }
+  }
+  namedValues = Object.fromEntries(namedValuesMap);
   var docID = createDoc(namedValues);
   var formName = FormApp.openByUrl(ss.getFormUrl()).getTitle();
   var doc = DriveApp.getFileById(docID);
@@ -54,9 +82,9 @@ function onFormSubmit(e) {
   {
     responseToRespondent(getRespondentEmail(ss, namedValues['row']), "направлена на согласование", formName, docs, "", "", ss, namedValues['row']);
   }
-  if (checkFinalStage(ss,row))
+  if (checkFinalStage(ss,namedValues['row']))
   {
-    sendToDestination(ss, row);
+    sendToDestination(ss, namedValues['row']);
   }
   else
   {
@@ -65,7 +93,6 @@ function onFormSubmit(e) {
 }
 
 function applicationSplit(application) {
-  console.log("application = ", application);
   if (application != undefined && application.trim() != "") {
     var adds = [];
     var filesId = [];
@@ -133,10 +160,17 @@ function createDoc(namedValues) {
   var name = `${namedValues['Год']}-${new Date().getMonth() + 1}-${namedValues['День']} Записка №${namedValues['row']}.docx`;
   var docFile = DriveApp.getFileById(template.getId()).makeCopy(name, docFolder);
   var doc = DocumentApp.openById(docFile.getId());
-  console.log(namedValues);
   replaceValues(doc, namedValues);
   Utilities.sleep(500);
-  doc.saveAndClose();
+  try{
+    doc.saveAndClose();
+  }
+  catch (exception)
+  {
+    console.log(exception);
+    Drive.Files.remove(doc.getId());
+    createDoc(namedValues);
+  }
   Utilities.sleep(500);
   doc = DocumentApp.openById(docFile.getId());
   saveAsPDF(doc, docFolder);
@@ -145,7 +179,7 @@ function createDoc(namedValues) {
 
 function getResponseValues(ss, row) {
   // ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
-  // row = 16;
+  // row = 21;
   var formURL = ss.getFormUrl();
   var form = FormApp.openByUrl(formURL);
   var sheet = ss.getActiveSheet();
@@ -153,7 +187,7 @@ function getResponseValues(ss, row) {
   var columnIndex = headers[0].indexOf('Edit URL') + 1;
   var values = sheet.getRange(row, 1, 1, columnIndex - 1).getValues()[0];
   var formSubmitted = form.getResponses(values[0])[0];
-  var itemResponses = formSubmitted.getItemResponses();
+  var itemResponses = formSubmitted.getGradableItemResponses();
   var namedValues = {}
   for (var i = 0; i < itemResponses.length; i++) {
     var itemResponse = itemResponses[i];

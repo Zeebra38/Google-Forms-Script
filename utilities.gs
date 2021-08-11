@@ -16,7 +16,14 @@ function createComment(ss, row) {
   var approvers = getListOfApprovers(ss);
   var comment = "";
   for (var i = 0; i < approvers.length-1; i++) {
-    comment += `${approvers[i].email}: ${sheet.getRange(row, approvers[i].column).getNote()}<br>`;
+    if (sheet.getRange(row, approvers[i].column).getNote() != undefined && sheet.getRange(row, approvers[i].column).getNote() != "")
+    {
+      comment += `${approvers[i].email}: ${sheet.getRange(row, approvers[i].column).getNote()}<br>`;
+    }
+    else
+    {
+      comment += `${approvers[i].email}: без комментариев <br>`;
+    }
   }
   var message = HtmlService.createHtmlOutput(comment).getContent();
   console.log("Message = ", message);
