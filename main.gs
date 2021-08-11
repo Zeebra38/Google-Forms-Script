@@ -1,20 +1,36 @@
 function setUpTrigger(spreadsheetsId) {
   spreadsheetsId = spreadsheetsId.split("\n");
   spreadsheetsId.forEach(function (element) {
-    if (ScriptApp.getUserTriggers(SpreadsheetApp.openById(element))) {
-      var triggers = ScriptApp.getProjectTriggers();
-      for (var i = 0; i < triggers.length; i++) {
-        ScriptApp.deleteTrigger(triggers[i]);
+    if (element != undefined && element.length > 5) {
+      if (ScriptApp.getUserTriggers(SpreadsheetApp.openById(element))) {
+        var triggers = ScriptApp.getProjectTriggers();
+        for (var i = 0; i < triggers.length; i++) {
+          ScriptApp.deleteTrigger(triggers[i]);
+        }
       }
+      ScriptApp.newTrigger('onFormSubmit').forSpreadsheet(element).onFormSubmit().create();
     }
-    ScriptApp.newTrigger('onFormSubmit').forSpreadsheet(element).onFormSubmit().create();
   })
 
 }
 
-function mainSetup(ssId= "1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A")
-{
+function mainSetup(ssId = "1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A") {
   setUpTrigger(ssId)
+}
+
+function check() {
+  if (ScriptApp.getUserTriggers(SpreadsheetApp.openById("16euBAupWneBnNlv5Pe_S5Yuf4K090E0vrIw0B2vrlE4"))) {
+    var triggers = ScriptApp.getProjectTriggers();
+    for (var i = 0; i < triggers.length; i++) {
+      console.log(triggers[i].getHandlerFunction());
+    }
+  }
+}
+
+function setUpTriggerToCurrentSpreadSheet() {
+  var ss = SpreadsheetApp.getActive();
+  setUpTrigger(ss.getId());
+  return HtmlService.createHtmlOutput("Все ок");
 }
 
 function onFormSubmit(e) {
@@ -46,26 +62,20 @@ function onFormSubmit(e) {
     Drive.Files.remove(previousDocs.next().getId());
   }
   var namedValuesMap = new Map(Object.entries(namedValues));
-  for (let key of namedValuesMap.keys())
-  {
-    if (key.indexOf("вложение при необходимости") != -1)
-    {
-      if (namedValuesMap.get(key.split(" ").slice(0, -3).join(" ").trim()) == "" && namedValuesMap.get(key) != "")
-      {
+  for (let key of namedValuesMap.keys()) {
+    if (key.indexOf("вложение при необходимости") != -1) {
+      if (namedValuesMap.get(key.split(" ").slice(0, -3).join(" ").trim()) == "" && namedValuesMap.get(key) != "") {
         var bufArray = [];
         var curArray = namedValuesMap.get(key);
-        for (var i = 0; i < curArray.length; i ++)
-        {
-          if (!firstTime)
-          {
+        for (var i = 0; i < curArray.length; i++) {
+          if (!firstTime) {
             bufArray.push(`https://drive.google.com/open?id=${curArray[i]}`);
           }
-          else
-          {
+          else {
             bufArray.push(curArray[i]);
           }
         }
-        namedValuesMap.set(key.split(" ").slice(0, -3).join(" ").trim(), bufArray.join(", ")); 
+        namedValuesMap.set(key.split(" ").slice(0, -3).join(" ").trim(), bufArray.join(", "));
       }
     }
   }
@@ -78,16 +88,13 @@ function onFormSubmit(e) {
     docs.push(DriveApp.getFileById(addId));
   }
   console.log(namedValues);
-  if (firstTime)
-  {
+  if (firstTime) {
     responseToRespondent(getRespondentEmail(ss, namedValues['row']), "направлена на согласование", formName, docs, "", "", ss, namedValues['row']);
   }
-  if (checkFinalStage(ss,namedValues['row']))
-  {
+  if (checkFinalStage(ss, namedValues['row'])) {
     sendToDestination(ss, namedValues['row']);
   }
-  else
-  {
+  else {
     sendOnApprove(ss, namedValues['row'], firstTime);
   }
 }
@@ -162,11 +169,10 @@ function createDoc(namedValues) {
   var doc = DocumentApp.openById(docFile.getId());
   replaceValues(doc, namedValues);
   Utilities.sleep(500);
-  try{
+  try {
     doc.saveAndClose();
   }
-  catch (exception)
-  {
+  catch (exception) {
     console.log(exception);
     Drive.Files.remove(doc.getId());
     createDoc(namedValues);
