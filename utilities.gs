@@ -1,3 +1,8 @@
+/**
+ * Формирует тему письма
+ * @param {Spreadsheet} ss Гугл Таблица
+ * @param {number} row Номер строки
+ */
 function getSubject(ss, row) {
   var name = ss.getName();
   var docFolderName = name.replace('(Ответы)', 'Документы');
@@ -9,9 +14,12 @@ function getSubject(ss, row) {
   return doc.getName().slice(0, -4) + " ";
 }
 
+/**
+ * Находит комментарии к ответам 
+ * @param {Spreadsheet} ss Гугл Таблица
+ * @param {number} row Номер строки
+ */
 function createComment(ss, row) {
-  // ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
-  // row = 10;
   var sheet = ss.getActiveSheet();
   var approvers = getListOfApprovers(ss);
   var comment = "";
@@ -26,13 +34,15 @@ function createComment(ss, row) {
     }
   }
   var message = HtmlService.createHtmlOutput(comment).getContent();
-  console.log("Message = ", message);
   return message;
 }
 
+/**
+ * Возвращает true, если документ успешно прошел одобрение всеми и должен быть отправлен Адресату
+ * @param {Spreadsheet} ss Гугл Таблица
+ * @param {number} row Номер строки
+ */
 function checkFinalStage(ss, row) {
-  // ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
-  // row = 10;
   var sheet = ss.getActiveSheet();
   var approvers = getListOfApprovers(ss);
   for (var i = 0; i < approvers.length - 1; i++) {
@@ -43,6 +53,11 @@ function checkFinalStage(ss, row) {
   }
   return true;
 }
+
+/**
+ * Возвращает список email одобрителей в виде строки, которая потом используется для вставки в контент htmlTemplate
+ * @param {Spreadsheet} ss Гугл Таблица
+ */
 function getApproversToEmail(ss)
 {
   var approvers = getListOfApprovers(ss);
@@ -52,8 +67,4 @@ function getApproversToEmail(ss)
     approversEmails.push(approvers[i].email);
   }
   return approversEmails.join(", ");
-}
-
-function addslashes( str ) {
-    return (str + '').replace(/[\\"']/g, '\\$&').replace(/\u0000/g, '\\0');
 }

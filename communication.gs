@@ -1,3 +1,6 @@
+/**
+ * Класс для Одобрителя
+ */
 class Approver {
   constructor(email, name, column) {
     this.name = name;
@@ -5,17 +8,13 @@ class Approver {
     this.column = column;
   }
 }
-
-function sendEmail(email, subj, message) {
-  MailApp.sendEmail(
-    {
-      to: email,
-      subject: subj,
-      htmlBody: message
-    }
-  );
-}
-
+/**
+ * Функция для отправки email с прикрепленными файлами
+ * @param {string} email Электронный адрес получателя
+ * @param {string} subj Тема письма
+ * @param {htmlOutput} message Html содержание сообщения
+ * @param {[File]} files Массив прикрепленных файлов
+ */
 function sendEmailWithAttach(email, subj, message, files) {
   MailApp.sendEmail(
     {
@@ -27,8 +26,19 @@ function sendEmailWithAttach(email, subj, message, files) {
   );
 }
 
-
-function responseToRespondent(email, subject, formName, files, comments = "", editUrl = "", ss, row, col="") {
+/**
+ * Отвечает респонденту
+ * @param {string} email Электронный адрес получателя
+ * @param {string} subject Тема письма
+ * @param {string} formName Заголовок формы, на которую он отвечал
+ * @param {[File]} files Массив прикрепленных файлов
+ * @params {string} comments Комментарии "одобрителей"
+ * @params {string} editUrl Ссылка на редактирование
+ * @param {Spreadsheet} ss Гугл Таблица
+ * @param {number} row Номер строки
+ * @param {number} col Номер колонки; от кого пришел отказ
+ */
+function responseToRespondent(email, subject, formName, files, comments = "", editUrl = "", ss, row, col=0) {
   var templ;
   switch (subject) {
     case "отклонена":
@@ -52,8 +62,11 @@ function responseToRespondent(email, subject, formName, files, comments = "", ed
   sendEmailWithAttach(email, getSubject(ss ,row) + subject, message, files);
 }
 
+/**
+ * Возвращает список "одобртелей"
+ * @param {Spreadsheet} ss Гугл Таблица
+ */
 function getListOfApprovers(ss) {
-  // ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
   var sheet = ss.getActiveSheet();
   var lastCol = ss.getLastColumn();
   var range = sheet.getRange(1, 1, 1, lastCol);
@@ -70,12 +83,14 @@ function getListOfApprovers(ss) {
   }
   return approvers;
 }
+
 /**
- * @param {Boolean} firstTime
+ * Заполняет стобцы "одобрителей" фразой "На обработке", а также отправляет письмо следующему по порядку отправителю
+ * @param {Spreadsheet} ss Гугл Таблица
+ * @param {number} row Номер строки, от которой пришел запрос с изменением содержимого
+ * @param {boolean} firstTime Это первая отправка формы или ответ уже был изменен?
  */
 function sendOnApprove(ss, row, firstTime) {
-  // ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
-  // row = 17;
   var sheet = ss.getActiveSheet();
   var name = ss.getName();
   var docFolderName = name.replace('(Ответы)', 'Документы');
@@ -115,6 +130,11 @@ function sendOnApprove(ss, row, firstTime) {
   }
 }
 
+/**
+ * Отправляет готовый одобренный весми документ адресату
+ * @param {Spreadsheet} ss Гугл Таблица
+ * @param {number} row Номер строки, от которой пришел запрос с изменением содержимого
+ */
 function sendToDestination(ss, row)
 {
   var destinationApprover = getListOfApprovers(ss).pop();
@@ -141,6 +161,12 @@ function sendToDestination(ss, row)
   sendEmailWithAttach(destinationApprover.email, getSubject(ss, row) + `по форме "${formName}"`,  message, docs);
 }
 
+/**
+ * Проверка ответов "одобрителей". В зависимости от ответов передает управление дальше
+ * @param {Spreadsheet} ss Гугл Таблица
+ * @param {number} row Номер строки, от которой пришел запрос с изменением содержимого
+ * @param {number} column Номер колонки, от которой пришел запрос с изменением содержимого
+ */
 function readyCheck(ss, row, column) {
   var sheet = ss.getActiveSheet();
   var lastCol = ss.getLastColumn();
@@ -151,7 +177,6 @@ function readyCheck(ss, row, column) {
     start_responses.push(sheet.getRange(row, approvers[i].column).getValue()); 
   }
   var responses = [...new Set(start_responses)];
-  console.log("responses = ",responses);
   var name = ss.getName();
   var docFolderName = name.replace('(Ответы)', 'Документы');
   var curFile = DriveApp.getFileById(ss.getId());
@@ -179,7 +204,11 @@ function readyCheck(ss, row, column) {
     sendOnApprove(ss, row, false);
   }
 }
-
+/**
+ * Возращает email исполнителя. Он должен быть написан в столбце с названием "e-mail исполнителя"
+ * @param {Spreadsheet} ss Гугл Таблица
+ * @param {number} number Номер строки, от которой пришел запрос с изменением содержимого
+ */
 function getRespondentEmail(ss, number) {
   var sheet = ss.getActiveSheet();
   var lastCol = ss.getLastColumn();
@@ -189,9 +218,13 @@ function getRespondentEmail(ss, number) {
   return sheet.getRange(number, parseInt(column) + 1).getValue();
 }
 
+/**
+ * Добавляет или просто возвращает (если justReturn = true) ссылку на редактирование таблицы
+ * @param {Spreadsheet} ss Гугл Таблица
+ * @param {number} row Номер строки, от которой пришел запрос с изменением содержимого
+ * @params {bollean} justReturn Если true, то просто возвращает ссылку и ничего не делает с контентом таблицы
+ */
 function appendEditorUrl(ss, row, justReturn = false) {
-  // ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
-  // row = 16;
   if (!justReturn) {
     var formURL = ss.getFormUrl();
     var form = FormApp.openByUrl(formURL);
@@ -210,10 +243,4 @@ function appendEditorUrl(ss, row, justReturn = false) {
     var columnIndex = headers[0].indexOf('Edit URL') + 1;
     return sheet.getRange(row, columnIndex).getValue();
   }
-}
-
-function test() {
-  var ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
-  var sheet = ss.getActiveSheet();
-  console.log(sheet.getLastRow());
 }

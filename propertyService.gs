@@ -1,8 +1,15 @@
-function saveSettings(scriptUrl = "https://script.google.com/macros/s/AKfycbxI19xiYqrIRrvVrZhKRvUrIuBPHLWYdHx_-pSyG3gwFrd5y87k3y6xN5wYmWpo33FS/exec") {
+/**
+ * Сохраряент настройки для текущего скрипта
+ * @param {string} scriptUrl Ссылка на развернутое Web-приложение
+ */
+function saveSettings(scriptUrl = "") {
   var scriptProperties = PropertiesService.getScriptProperties();
   scriptProperties.setProperty('scriptURL', scriptUrl);
 }
 
+/**
+ * Загружает настроки для текущего проекта
+ */
 function loadSettings()
 {
   var scriptProperties = PropertiesService.getScriptProperties();

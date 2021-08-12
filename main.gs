@@ -1,3 +1,6 @@
+/**
+ * Проверяет наличие триггеров на Таблицах по их Id, разделенных "/n". Если они есть, то удаляет, а потом устанавливает триггер "On form submit" на функицю "onFormSubmit"
+ */
 function setUpTrigger(spreadsheetsId) {
   spreadsheetsId = spreadsheetsId.split("\n");
   spreadsheetsId.forEach(function (element) {
@@ -13,26 +16,17 @@ function setUpTrigger(spreadsheetsId) {
   })
 
 }
-
-function mainSetup(ssId = "1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A") {
+/**
+ * Устанавливает триггеры на все Таблицы по их Id, разделенные '\n'
+ */
+function mainSetup(ssId = "") {
   setUpTrigger(ssId)
 }
 
-function check() {
-  if (ScriptApp.getUserTriggers(SpreadsheetApp.openById("16euBAupWneBnNlv5Pe_S5Yuf4K090E0vrIw0B2vrlE4"))) {
-    var triggers = ScriptApp.getProjectTriggers();
-    for (var i = 0; i < triggers.length; i++) {
-      console.log(triggers[i].getHandlerFunction());
-    }
-  }
-}
-
-function setUpTriggerToCurrentSpreadSheet() {
-  var ss = SpreadsheetApp.getActive();
-  setUpTrigger(ss.getId());
-  return HtmlService.createHtmlOutput("Все ок");
-}
-
+/**
+ * Основная фукнция программы. Срабатывает при отправке формы
+ * @param {event} e Событие, которое передает Google при вызове функции. Внутри namedValues - объект, который создержит пары ключ-значение ответов формы.
+ */
 function onFormSubmit(e) {
   var response = e;
   var ss = SpreadsheetApp.getActive();
@@ -44,7 +38,6 @@ function onFormSubmit(e) {
   var docFolder = dir.getFoldersByName(docFolderName).next();
   var previousDocs = docFolder.searchFiles(`title contains "Записка №${response['range']['rowEnd']}"`);
   var firstTime = !previousDocs.hasNext();
-  console.log(response);
   var namedValues;
   if (firstTime) {
     namedValues = response.namedValues;
@@ -87,7 +80,6 @@ function onFormSubmit(e) {
   for (let addId of adds['filesId']) {
     docs.push(DriveApp.getFileById(addId));
   }
-  console.log(namedValues);
   if (firstTime) {
     responseToRespondent(getRespondentEmail(ss, namedValues['row']), "направлена на согласование", formName, docs, "", "", ss, namedValues['row']);
   }
@@ -99,6 +91,10 @@ function onFormSubmit(e) {
   }
 }
 
+/**
+ * Функция разделяет Приложения на 2 массива, которые записаны в Объект. filesId - Id файлов приложений, names - имена файлов приложений
+ * @param {string} application Строка, содержащая ссылки на приложения, записанные через ", "
+ */
 function applicationSplit(application) {
   if (application != undefined && application.trim() != "") {
     var adds = [];
@@ -115,6 +111,12 @@ function applicationSplit(application) {
   }
   return { 'filesId': [], 'names': [] }
 }
+
+/**
+ * Находит данные ячейки по findRow и первому столбцу, содержащему слово "приложение"\
+ * @param {Spreadsheet} ss Гугл Таблица
+ * @param {number} findRow Номер строки
+ */
 function getApplication(ss, findRow) {
   var sheet = ss.getActiveSheet();
   var lastCol = ss.getLastColumn();
@@ -128,6 +130,11 @@ function getApplication(ss, findRow) {
     }
   }
 }
+
+/**
+ * Создает документ из шаблона "%Название формы% (Шаблон)"
+ * @param {object} namedValues Словарь ключ-значение, содержащий данные
+ */
 function createDoc(namedValues) {
   var ss = SpreadsheetApp.getActive();
   var name = ss.getName();
@@ -182,10 +189,12 @@ function createDoc(namedValues) {
   saveAsPDF(doc, docFolder);
   return docFile.getId();
 }
-
+/**
+ * Если форма была отправлена раньеш, то при редактировании формы в namedValues будут только измененные пункты. Эта фукнция находит данные прошлых ответов формы по timestamp (1 столбец в таблице)
+ * @param {Spreadsheet} ss Гугл Таблица
+ * @param {number} row Номер строки
+ */
 function getResponseValues(ss, row) {
-  // ss = SpreadsheetApp.openById("1XT6aHEvD9AZvar8ypWYEFtibHGk-s6Ojx_Nmv04iK-A");
-  // row = 21;
   var formURL = ss.getFormUrl();
   var form = FormApp.openByUrl(formURL);
   var sheet = ss.getActiveSheet();
@@ -201,15 +210,25 @@ function getResponseValues(ss, row) {
   }
   return namedValues;
 }
+
+/**
+ * Функция, используемая для замены данных в документе, находящихся в виде "<<%Название пункта в форме%>>"
+ * @param {Document} doc открытый Гугл Документ
+ * @param {object} namedValues Словарь ключ-значение, содержащий данные
+ */
 function replaceValues(doc, namedValues) {
   var body = doc.getBody();
   Object.entries(namedValues).forEach(function ([key, value]) {
-    // var pattern = addslashes("<<" + key + ">>");
     var pattern = "<<" + key + ">>";
     body.replaceText(pattern, value);
   });
 }
 
+/**
+ * Функция, используемая для сохранения Документа в виде .pdf
+ * @param {Document} doc открытый Гугл Документ
+ * @param {Folder} folder Папка, куда необходимо сохранить итоговый .pdf
+ */
 function saveAsPDF(doc, folder) {
   var docPDF = doc.getAs('application/pdf');
   docPDF.setName(doc.getName().replace('.docx', '.pdf'));
