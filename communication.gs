@@ -232,7 +232,7 @@ function appendEditorUrl(ss, row, justReturn = false) {
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues();
     var columnIndex = headers[0].indexOf('Edit URL') + 1;
     var values = sheet.getRange(row, 1, 1, columnIndex - 1).getValues()[0];
-    var formSubmitted = form.getResponses(values[0]);
+    var formSubmitted = form.getResponses(values[1]);
     var editResponseUrl = formSubmitted[0].getEditResponseUrl();
     sheet.getRange(row, columnIndex).setValue(editResponseUrl);
     return editResponseUrl;

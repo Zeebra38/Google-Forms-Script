@@ -201,7 +201,7 @@ function getResponseValues(ss, row) {
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues();
   var columnIndex = headers[0].indexOf('Edit URL') + 1;
   var values = sheet.getRange(row, 1, 1, columnIndex - 1).getValues()[0];
-  var formSubmitted = form.getResponses(values[0])[0];
+  var formSubmitted = form.getResponses(values[1])[0];
   var itemResponses = formSubmitted.getGradableItemResponses();
   var namedValues = {}
   for (var i = 0; i < itemResponses.length; i++) {
